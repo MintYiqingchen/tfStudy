@@ -1,6 +1,7 @@
 from PIL import Image
 import struct
 import random
+import numpy as np
 class Imagedata(object):
     class Data(object):
         def __init__(self,image=None,label=None,size=None):
@@ -27,26 +28,24 @@ class Imagedata(object):
     def next_batch(self,bsize):
         res_image=[]
         res_label=[]
-        label_onehot=[0]*10
         for i in range(bsize):
             idx=random.randint(0,len(self.data)-1)
-            res_image.append(self.data[idx].image)
+            res_image.append(np.multiply(self.data[idx].image,1.0/255.0))
             # 对标签进行onehot编码
+            label_onehot=[0]*10
             label_onehot[self.data[idx].label]=1
             res_label.append(label_onehot)
-            label_onehot[self.data[idx].label]=0
         return res_image,res_label
     @property
     def images(self):
-        return [self.data[i].image for i in range(len(self.data))]
+        return [np.multiply(self.data[i].image,1.0/255.0) for i in range(len(self.data))]
     @property
     def labels(self):
-        label_onehot=[0]*10
         res_labels=[]
         for i in range(len(self.data)):
+            label_onehot=[0]*10
             label_onehot[self.data[i].label]=1
             res_labels.append(label_onehot)
-            label_onehot[self.data[i].label]=0
         return res_labels            
 
 def read_image_onehot(filename,imageList):
@@ -120,6 +119,7 @@ def read_label(filename,saveFilename):
 
 if __name__=="__main__":
     mnist_train=Imagedata()
-    mnist_train.read_data("train-images.idx3-ubyte","train-labels.idx1-ubyte")
+    mnist_train.read_data("t10k-images.idx3-ubyte","t10k-labels.idx1-ubyte")
     image=mnist_train[0].toImage()
     image.show()
+    print(mnist_train.images[0])
