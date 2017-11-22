@@ -54,39 +54,41 @@ def file2matrix(filename):
 
 def datingClassTest():
     hoRatio = 0.90
-    X,Y = file2matrix('datingTestSet.txt')
+    X,Y = file2matrix('datingTestSet2.txt')
     m = len(X)
-    trainData, trainLables = autoNorm(X[:int(m*hoRatio)]), Y[:int(m*hoRatio)]
+    trainData, trainLabels = autoNorm(X[:int(m*hoRatio)]), Y[:int(m*hoRatio)]
     testData, testLabels = autoNorm(X[int(m*hoRatio):]), Y[int(m*hoRatio):]
     errorCount = 0.0
     for i in range(len(testData)):
-        clsRes = classify0(testData[i,:],trainData,trainLables,3)
+        clsRes = classify0(testData[i,:],trainData,trainLabels,3)
         #print("the classifier result came back with %s, the real answer is %s"%\
         #        (clsRes, testLabels[i]))
         if clsRes!=testLabels[i]:
             errorCount+=1.0
 
     print("the total error rate is %f"%(errorCount/float(len(testData))))
-    clf = KNeighborsClassifier(n_neighbors=3)
+    clf = KNeighborsClassifier(n_neighbors=3, metric="euclidean")
     clf.fit(trainData, trainLabels)
     sklRes = clf.predict(testData)
+
     errorCount = 0.0
     for i in range(len(testData)):
-        if sklRes!=testLabels[i]:
+        if sklRes[i]!=testLabels[i]:
             errorCount+=1.0
     print("the total error rate is %f"%(errorCount/float(len(testData))))
 
 def main():
-    X, Y = file2matrix('datingTestSet.txt')
+    X, Y = file2matrix('datingTestSet2.txt')
     # res = classify0([7000, 15.5, 0],X,Y,20)
     X = autoNorm(X)
-    style = [ord(y[0]) for y in Y]
+    style = np.array([ord(y[0]) for y in Y])
+    print(style[:10])
     ax = plt.subplot(311)
-    ax.scatter(X[:,1], X[:,2],c=15.0*np.array(style))
+    ax.scatter(X[:,1], X[:,2],c=10*style)
     ax = plt.subplot(312)
-    ax.scatter(X[:,0], X[:,1],c=15.0*np.array(style))
+    ax.scatter(X[:,0], X[:,1],c=10*style)
     ax = plt.subplot(313)
-    ax.scatter(X[:,0],X[:,2],c=15.0*np.array(style))
+    ax.scatter(X[:,0],X[:,2],c=10*style)
     plt.show()
 
 # ---------------------------------
@@ -119,5 +121,5 @@ def digitalTest(traindir, testdir):
 	print("predict precise: %f"%(errorCount/float(len(testData))))
 
 if __name__=="__main__":
-    # main()
+    main()
     datingClassTest()
