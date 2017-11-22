@@ -2,6 +2,11 @@ import numpy as np
 import operator
 import matplotlib.pyplot as plt
 
+import os
+from sklearn.neighbors import KNeighborsClassifier
+
+from functools import reduce
+
 def autoStandarize(data):
     avgs = data.mean(axis=0)
     stds = data.std(axis=0)
@@ -16,7 +21,7 @@ def createDataSet():
     group = np.array([[1.0,1.1],[1.0,1.0],[0,0],[0,0.1]])
     labels = ['A','A','B','B']
     return group, labels
-
+# ------- k近邻算法 ------------
 def classify0( point, data, labels, k):
     if isinstance(point, list):
         point = np.array(point,dtype='float64')
@@ -36,34 +41,43 @@ def classify0( point, data, labels, k):
         
     cls = max(iter(classCount))
     return cls
-    
-
+# ------------------------------
+# -------约会对象预测分类 ----------
 def file2matrix(filename):
     ''' 示例数据为datingTestSet.txt'''
     raw_data = []
     with open(filename,encoding='utf8') as f:
         raw_data =np.array([x.split('\t') for x in f ])
     labels = raw_data[:,-1]
-    fig = plt.figure()
     resArray = np.array(raw_data[:,:-1],dtype='float64')
     return resArray, labels
+
 def datingClassTest():
     hoRatio = 0.90
-    X,Y = file2matrix('./datingTestSet.txt')
+    X,Y = file2matrix('datingTestSet.txt')
     m = len(X)
     trainData, trainLables = autoNorm(X[:int(m*hoRatio)]), Y[:int(m*hoRatio)]
     testData, testLabels = autoNorm(X[int(m*hoRatio):]), Y[int(m*hoRatio):]
     errorCount = 0.0
     for i in range(len(testData)):
         clsRes = classify0(testData[i,:],trainData,trainLables,3)
-        print("the classifier result came back with %s, the real answer is %s"%\
-                (clsRes, testLabels[i]))
+        #print("the classifier result came back with %s, the real answer is %s"%\
+        #        (clsRes, testLabels[i]))
         if clsRes!=testLabels[i]:
             errorCount+=1.0
 
     print("the total error rate is %f"%(errorCount/float(len(testData))))
+    clf = KNeighborsClassifier(n_neighbors=3)
+    clf.fit(trainData, trainLabels)
+    sklRes = clf.predict(testData)
+    errorCount = 0.0
+    for i in range(len(testData)):
+        if sklRes!=testLabels[i]:
+            errorCount+=1.0
+    print("the total error rate is %f"%(errorCount/float(len(testData))))
+
 def main():
-    X, Y = file2matrix('./datingTestSet.txt')
+    X, Y = file2matrix('datingTestSet.txt')
     # res = classify0([7000, 15.5, 0],X,Y,20)
     X = autoNorm(X)
     style = [ord(y[0]) for y in Y]
@@ -74,6 +88,36 @@ def main():
     ax = plt.subplot(313)
     ax.scatter(X[:,0],X[:,2],c=15.0*np.array(style))
     plt.show()
+
+# ---------------------------------
+
+# ----------- 手写数字分类 --------
+def parseData(dirname):
+	filenames = os.listdir(dirname)
+	labels = []
+	vecs = []
+	for fname in filenames:
+		labels.append(fname.split('.')[0].split('_')[0])
+		with open(fname) as f:
+			vec = reduce(lambda x,y:x+y,[l.strip() for l in f])
+			assert len(vec)==1024, "length of digital image vector is fault"
+			vecs.append(vec)
+	return np.array(vecs), np.array(labels,dtype='int32')
+
+def digitalTest(traindir, testdir):
+	trainData, trainLabels = parseData(traindir)
+	testData, testLabels = parseData(testdir)
+	clf = KNeighborsClassifier()
+	clf.fit(trainData, trainLables)
+	res = clf.predict(testData)
+
+	errorCount = 0.0
+	for i in len(res):
+		if res[i]!=testLabels[i]:
+			errorCount+=1.0
+
+	print("predict precise: %f"%(errorCount/float(len(testData))))
+
 if __name__=="__main__":
     # main()
     datingClassTest()
