@@ -100,26 +100,27 @@ def parseData(dirname):
 	vecs = []
 	for fname in filenames:
 		labels.append(fname.split('.')[0].split('_')[0])
-		with open(fname) as f:
+		with open(os.path.join(dirname,fname)) as f:
 			vec = reduce(lambda x,y:x+y,[l.strip() for l in f])
 			assert len(vec)==1024, "length of digital image vector is fault"
-			vecs.append(vec)
+			vecs.append(np.array(list(vec),dtype='float64'))
 	return np.array(vecs), np.array(labels,dtype='int32')
 
 def digitalTest(traindir, testdir):
-	trainData, trainLabels = parseData(traindir)
-	testData, testLabels = parseData(testdir)
-	clf = KNeighborsClassifier()
-	clf.fit(trainData, trainLables)
-	res = clf.predict(testData)
+    trainData, trainLabels = parseData(traindir)
+    testData, testLabels = parseData(testdir)
+    clf = KNeighborsClassifier()
+    clf.fit(trainData, trainLabels)
+    res = clf.predict(testData)
+    errorCount = 0.0
+    for i in range(len(res)):
+        if res[i]!=testLabels[i]:
+            errorCount+=1.0
 
-	errorCount = 0.0
-	for i in len(res):
-		if res[i]!=testLabels[i]:
-			errorCount+=1.0
-
-	print("predict precise: %f"%(errorCount/float(len(testData))))
+    print("predict precise: %f"%(errorCount/float(len(testData))))
 
 if __name__=="__main__":
-    main()
-    datingClassTest()
+    # main()
+    # datingClassTest()
+    os.chdir('../../machinelearninginaction/Ch02')
+    digitalTest('trainingDigits','testDigits')
