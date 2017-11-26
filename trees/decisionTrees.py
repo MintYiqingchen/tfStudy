@@ -14,29 +14,32 @@ def createData():
     charName = ['no surfacing', 'flipper']
     return dataSet, labels, charName
 
-def getEntropyDiscrete(data, charName=None):
+def getEntropyDiscrete(label):
     '''
-    返回当前数据集每一特征的信息熵
+    返回当前数据集的信息熵
     '''
-    numChar = len(data[0])
-    counterList = [{} for i in range(numChar)]
-    for i in range(len(data)):
-        for j, v in enumerate(data[i]):
-            counterList[j][v] = counterList[j].get(v, 0)+1
-    # 逐个计算熵
-    etpRes = []
-    for counter in counterList:
-        pp = np.array([v/len(data) for v in counter.values()])
-        etp = np.sum(-pp*np.log2(pp))
-        etpRes.append(etp)
-    return np.array(etpRes)
+    labelCounter={}
+    for ll in label:
+        labelCounter[ll] = labelCounter.get(ll, 0)+1
+    
+    pp = np.array(list(labelCounter.values()),dtype='float64')/len(label)
+    etp = -np.sum(pp*np.log2(pp))
+    return etp
 
-def chooseBestFeature(data):
-    '''返回信息增益最大的feature'''
-    etps = getEntropyDiscrete(data)
-    idxBest = etps.argmax()
-    print('best feature is:%d'%(idxBest))
-    return idxBest
+def splitByFeature(X, Y, i):
+    '''根据数据集X的第i个feature划分'''
+    resData = {}
+    for idx, data in enumerate(X):
+        if not resData.get(data[i]):
+            Xset = [data]
+            Yset = [Y[idx]]
+            resData[data[i]] = (Xset, Yset)
+        else:
+            resData[data[i]][0].append(data)
+            resData[data[i]][1].append(Y[idx])
+    return resData
+
+
 
 class DecisionTree(object):
     def __init__(self, maxHeight=9999):
@@ -45,17 +48,24 @@ class DecisionTree(object):
         self.features = None # 存储特征的index
         self.feaname = None # 存储特征的名字
         self.classes = None # 存储总共有哪些分类
-
+    def reset(self):
+        self.tree = None
+        self.features = None # 存储特征的index
+        self.feaname = None # 存储特征的名字
+        self.classes = None # 存储总共有哪些分
+    def __str__(self):
+        return str(self.tree)
     def fit(self, X, Y, feaName):
+        self.reset()
         self.tree = {}
         self.features = []
         self.feaname = feaName
         self.maxHeight = min(self.maxHeight, len(self.feaname))
         data = X[:]
         labels = Y[:]
-        print(data, labels)
+        # print(data, labels)
         self.classes = set(labels)
-        self.tree = self.buildTreeRecursive(data, labels, 0)
+        self.tree = self.buildTreeRecursive(data, labels, 0, feaMask=[1]*len(X[0]))
         
     def countMajor(self, labels):
         res = {}
@@ -64,32 +74,40 @@ class DecisionTree(object):
         major = max(res, key = res.get)
         return major
     
-    def buildTreeRecursive(self, data, labels, currHeight):
-        '''逐层递归建立节点'''
+    def buildTreeRecursive(self, data, labels, currHeight, feaMask):
+        '''逐层递归建立节点，每个节点是一个字典'''
         currHeight += 1
-        print(currHeight, data, labels)
+        # print(currHeight, data, labels)
         if currHeight > self.maxHeight :
             return self.countMajor(labels) # 到达深度直接返回分类
         if labels.count(labels[0]) == len(labels):
             return labels[0] # 全部一样直接返回分类
-        idxBest = chooseBestFeature(data) 
-        self.features.append(idxBest) 
-        subsets = {}
-        for i,d in enumerate(data):
-            fv = d[idxBest]
-            if subsets.get(fv):
-                subsets[fv].append((d, labels[i]))
-            else :
-                subsets[fv] = [(d, labels[i])]
-        print(subsets)
-        # 划分完毕后每一个类进行递归分类
-        subRoot = {}
-        for k,v in subsets.items():
-            data = [ x[0] for x in v]
-            labels = [ x[1] for x in v]
-            subRoot[k] = self.buildTreeRecursive(data, labels,currHeight)
-        return subRoot
-    
+        
+        # 根据划分后信息熵最小的特征进行划分
+        minetp = 1e10
+        idxBest = None
+        nextData = None # 储存最终划分后的集合
+        for i in range(len(self.feaname)):
+            if feaMask[i]:
+                splitedData = splitByFeature(data, labels, i)
+                etp = 0.0
+                for fv, spd in splitedData.items(): # spd: (X, Y)
+                    etp += getEntropyDiscrete(spd[1]) # 只传入标签，计算每个子集信息熵总和
+                
+                if etp <= minetp: # 若当前信息熵最小
+                    idxBest = i
+                    nextData = splitedData
+                    minetp = etp
+
+        print("the best feature is ",idxBest)
+        feaMask[idxBest] = 0
+        inode = {}
+        subroot = {self.feaname[idxBest]: inode}
+        for fv, spd in nextData.items():
+            inode[fv] = self.buildTreeRecursive(spd[0], spd[1], currHeight, feaMask)
+        feaMask[idxBest] = 1
+        return subroot
+
     def predict(self, X):
         assert len(X)==len(self.feaname), "the number of feature doesn't match"
         # 从根部开始
