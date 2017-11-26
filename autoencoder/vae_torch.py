@@ -12,7 +12,7 @@ import os
 from torchvision.utils import save_image
 
 import logging
-logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(asctime)s:%(message)s)")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(asctime)s:%(message)s)")
 # if not os.path.exists('./vae_img'):
 #    os.mkdir('vae_img')
 
@@ -156,7 +156,7 @@ if __name__=="__main__":
             optimizer.step()
 
             if batchidx%10==0:
-                logging.info("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(epoch, batchidx*len(img),len(trainloader.dataset), 10*batchidx/len(trainloader), train_loss/len(img)))
+                logging.info("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(epoch, batchidx*len(img),len(trainloader.dataset), 10*batchidx/len(trainloader),loss.data[0]/len(img)))
 
             # if batchidx==10:
             #     break
