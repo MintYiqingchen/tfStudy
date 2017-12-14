@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 def loadDataSet():
     postingList=[['my', 'dog', 'has', 'flea', 'problems', 'help', 'please'],
                  ['maybe', 'not', 'take', 'him', 'to', 'dog', 'park', 'stupid'],
@@ -25,7 +25,13 @@ def word2Set(vobList, doc):
             idx = vobList.index(word)
             bagvec[idx] = 1
     return bagvec
-
+def word2Bag(vobList, doc):
+    bagvec = [0]*len(vobList)
+    for word in doc:
+        if word in vobList:
+            idx = vobList.index(word)
+            bagvec[idx] += 1
+    return bagvec
 class NaiveBayesClassifier(object):
     def __init__(self, transform=word2Set):
         self.clsWordFrequency = {} # p(X|c)
@@ -75,11 +81,46 @@ class NaiveBayesClassifier(object):
             res.append(self._predict(doc))
         return res
 
+#----------------- use model -------------------
+def textParse(bigString):
+    import re
+    pat = re.compile(r'\W*')
+    tokens = re.split(pat, bigString.lower())
+    return [tok for tok in tokens if len(tok)>2]
+def testModel():
+    docList = []
+    classList=[]
+    fullText=[]
+    for i in range(1,26):
+        wordList = textParse(\
+                        open('../../machinelearninginaction/Ch04/email/ham/%d.txt'%i,errors='ignore').read())
+        docList.append(wordList)
+        fullText.extend(wordList)
+        classList.append(1)
+        wordList = textParse(open('../../machinelearninginaction/Ch04/email/spam/%d.txt'%i, errors='ignore').read())
+        docList.append(wordList)
+        fullText.extend(wordList)
+        classList.append(0)
 
+    trainset = list(range(50)); testset=[]
+    for i in range(10):
+        randidx = int(random.uniform(0,len(trainset)))
+        testset.append(randidx)
+        del(trainset[randidx])
 
-if __name__ =="__main__":
-    docs , clsvec = loadDataSet()
+    trainLabels = [classList[idx] for idx in trainset]
+    testLabels = [classList[idx] for idx in testset]
+    trainset = [docList[idx] for idx in trainset]
+    testset = [docList[idx] for idx in testset]
     classifier = NaiveBayesClassifier()
-    classifier.fit(docs, clsvec)
-    print(classifier.predict(docs))
+    classifier.fit(trainset, trainLabels)
 
+    predicts = classifier.predict(testset)
+    errors = 0.0
+    for i,pred in enumerate(predicts):
+        cls = max(pred, key=lambda x:pred[x])
+        if testLabels[i] != cls:
+            errors += 1
+    print('the error rate is %f'%(errors/10))
+if  __name__ =="__main__":
+    testModel()
